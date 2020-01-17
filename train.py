@@ -22,11 +22,8 @@ def main(args):
     os.environ["CUDA_VISIBLE_DEVICES"] = str(args.gpu)
     cfg = load_config(args.config)
 
-    workdir = os.path.join(C.WORKDIR, cfg.workdir)
-    os.makedirs(workdir, exist_ok=True)
-
     pbar = ProgressBar()
-    tb_logger = TensorboardLogger(log_dir=os.path.join(workdir, "tb_logs"))
+    tb_logger = TensorboardLogger(log_dir=os.path.join(cfg.workdir, "tb_logs"))
 
     def _update(engine, batch):
         cfg.model.train()

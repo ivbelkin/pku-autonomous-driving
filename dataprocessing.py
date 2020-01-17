@@ -10,15 +10,20 @@ from utils import euler_angles_to_quaternions, rotation_to_quaternion
 from torchvision import transforms as T
 from utils import fit_image, parse_camera_intrinsic, orient_quaternion
 import config as C
+import numpy as np
+from tqdm import tqdm
+import torch
+import pickle
 
 
-class PKUJsonDataset(Dataset):
+class PKUSingleObjectDataset(Dataset):
 
-    def __init__(self, json_annotations, images_dir, augment_fn=None, prepare_sample_fn=None, annotation_filter_fn=None):
+    def __init__(self, json_annotations, images_dir, augment_fn=None, prepare_sample_fn=None, annotation_filter_fn=None, image_keys=('image',)):
         self.json_annotations = json_annotations
         self.images_dir = images_dir
         self.augment_fn = augment_fn
         self.prepare_sample_fn = prepare_sample_fn
+        self.image_keys = image_keys
 
         C.logger.info("Loading annotations from %s", json_annotations)
         with open(json_annotations, 'r') as f:
@@ -51,20 +56,27 @@ class PKUJsonDataset(Dataset):
         return len(self.gt['annotations'])
 
     def __getitem__(self, idx):
+        dct = self._getdct(idx)
+        if self.augment_fn is not None:
+            dct = self.augment_fn(dct)
+        if self.prepare_sample_fn is not None:
+            dct = self.prepare_sample_fn(dct)
+        for k in self.image_keys:
+            dct[k] = self.to_tensor(dct[k])
+        return dct
+
+    def _getdct(self, idx):
         ann = self.gt['annotations'][idx]
-        image = PKUJsonDataset.decode_image(self.images_jpeg[ann['image_id']])
+        image = PKUSingleObjectDataset.decode_image(self.images_jpeg[ann['image_id']])
         dct = dict(
+            idx=idx,
+            image_id=ann['image_id'],
             image=image,
             bbox=np.array(ann['bbox']),
             translation=np.array(ann['position']),
             rotation=np.array(ann['orientation']),
             label=self.category_id_to_label[ann['category_id']]
         )
-        if self.augment_fn is not None:
-            dct = self.augment_fn(dct)
-        if self.prepare_sample_fn is not None:
-            dct = self.prepare_sample_fn(dct)
-        dct['image'] = self.to_tensor(dct['image'])
         return dct
 
     def load_images(self):
@@ -81,6 +93,66 @@ class PKUJsonDataset(Dataset):
         image = Image.open(bytes_io)
         image.load()
         return image
+
+
+class PKUSingleObjectWithPrecomputedImageFeaturesDataset(PKUSingleObjectDataset):
+
+    def __init__(self, extract_featues_fn, workdir, file_name, dct_key, **kwargs):
+        super().__init__(**kwargs)
+        self.dct_key = dct_key
+
+        path = os.path.join(workdir, file_name)
+        if os.path.exists(path + '.data') and os.path.exists(path + '.index'):
+            with open(path + '.index', 'rb') as f:
+                self.image_id_to_features_index = pickle.load(f)
+            print(self.image_id_to_features_index)
+            with open(path + '.data', 'rb') as f:
+                self.features = pickle.load(f)
+        else:
+            self.image_id_to_features_index, self.features = self.extract_features(extract_featues_fn)
+            with open(path + '.index', 'wb') as f:
+                pickle.dump(self.image_id_to_features_index, f)
+            with open(path + '.data', 'wb') as f:
+                pickle.dump(self.features, f)
+
+    def __getitem__(self, idx):
+        dct = super().__getitem__(idx)
+        dct[self.dct_key] = self.features[self.image_id_to_features_index[dct['image_id']]]
+        return dct
+
+    def extract_features(self, extract_featues_fn):
+        C.logger.info("Start feature extraction")
+        image_id_to_features_index, features = {}, []
+        for idx in tqdm(range(super().__len__())):
+            dct = super().__getitem__(idx)
+            image_id = dct['image_id']
+            if image_id not in image_id_to_features_index:
+                image_id_to_features_index[image_id] = len(features)
+                features.append(extract_featues_fn(dct))
+        return image_id_to_features_index, features
+
+
+class ResnetFeatureExtractor:
+
+    def __init__(self, model, dct_key):
+        self.model = model
+        self.dct_key = dct_key
+
+    def __call__(self, dct):
+        x = dct[self.dct_key].float().cuda()[None, :, :, :]
+
+        with torch.no_grad():
+            x = self.model.conv1(x)
+            x = self.model.bn1(x)
+            x = self.model.relu(x)
+            x = self.model.maxpool(x)
+
+            x = self.model.layer1(x)
+            x = self.model.layer2(x)
+            x = self.model.layer3(x)
+            x = self.model.layer4(x)
+
+        return x.cpu().numpy()
 
 
 def augment_fn_pass(dct):
