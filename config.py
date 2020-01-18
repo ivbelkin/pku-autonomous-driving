@@ -30,8 +30,8 @@ TRAIN_OBJECTS_BBOX_SINGLE_CLASS_JSON = os.path.join(JSON_DIR, "train_objects_bbo
 TRAIN_OBJECTS_SEGM_SINGLE_CLASS_JSON = os.path.join(JSON_DIR, "train_objects_segm_single_class.json")
 TRAIN_OBJECTS_BOTH_SINGLE_CLASS_JSON = os.path.join(JSON_DIR, "train_objects_both_single_class.json")
 
-# TEST_OBJECTS_IMAGE_INFO_JSON = os.path.join(JSON_DIR, "test_objects_cars.json")
-# TEST_OBJECTS_SINGLE_CLASS_IMAGE_INFO_JSON = os.path.join(JSON_DIR, "test_objects_single_class_cars.json")
+TEST_IMAGE_INFO_JSON = os.path.join(JSON_DIR, "test_image_info.json")
+TEST_IMAGE_INFO_SINGLE_CLASS_JSON = os.path.join(JSON_DIR, "test_image_info_single_class.json")
 
 N_FOLDS = 5
 CV_DIR = os.path.join(JSON_DIR, "cv")
@@ -55,3 +55,5 @@ TRAIN_CROPS_CALIBRATED = os.path.join(TRAIN_CROPS_DIR, "calibrated")
 NOISY_IMAGES = "noisy_images.csv"
 
 WORKDIR = "work_dir"
+
+TEST_DETECTIONS = "/home/ivb/Repos/cds-mmdetection/work_dirs/pku-autonomous-driving/cascade_rcnn_hrnetv2p_w48_v2/test_ms_flip_reindexed.bbox.json"

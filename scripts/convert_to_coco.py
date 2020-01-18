@@ -208,26 +208,26 @@ def main(args):
     ]
     car_id2vertices, car_id2triangles = utils.load_car_models()
 
-    train_gt = process_train(categories, car_id2vertices, car_id2triangles)
-    train_masks = process_ignore_masks(C.TRAIN_IGNORE_MASKS)
-    merge_with_ignore_masks(train_gt, train_masks)
-    remove_noisy_images(train_gt)
+    # train_gt = process_train(categories, car_id2vertices, car_id2triangles)
+    # train_masks = process_ignore_masks(C.TRAIN_IGNORE_MASKS)
+    # merge_with_ignore_masks(train_gt, train_masks)
+    # remove_noisy_images(train_gt)
 
-    train_single_class_gt = join_classes(train_gt)
+    # train_single_class_gt = join_classes(train_gt)
 
-    with open(C.TRAIN_OBJECTS_BOTH_JSON, "w") as f:
-        json.dump(train_gt, f)
-    with open(C.TRAIN_OBJECTS_BBOX_JSON, "w") as f:
-        json.dump(select_bbox(train_gt), f)
-    with open(C.TRAIN_OBJECTS_SEGM_JSON, "w") as f:
-        json.dump(select_segmentation(train_gt), f)
+    # with open(C.TRAIN_OBJECTS_BOTH_JSON, "w") as f:
+    #     json.dump(train_gt, f)
+    # with open(C.TRAIN_OBJECTS_BBOX_JSON, "w") as f:
+    #     json.dump(select_bbox(train_gt), f)
+    # with open(C.TRAIN_OBJECTS_SEGM_JSON, "w") as f:
+    #     json.dump(select_segmentation(train_gt), f)
 
-    with open(C.TRAIN_OBJECTS_BOTH_SINGLE_CLASS_JSON, "w") as f:
-        json.dump(train_single_class_gt, f)
-    with open(C.TRAIN_OBJECTS_BBOX_SINGLE_CLASS_JSON, "w") as f:
-        json.dump(select_bbox(train_single_class_gt), f)
-    with open(C.TRAIN_OBJECTS_SEGM_SINGLE_CLASS_JSON, "w") as f:
-        json.dump(select_segmentation(train_single_class_gt), f)
+    # with open(C.TRAIN_OBJECTS_BOTH_SINGLE_CLASS_JSON, "w") as f:
+    #     json.dump(train_single_class_gt, f)
+    # with open(C.TRAIN_OBJECTS_BBOX_SINGLE_CLASS_JSON, "w") as f:
+    #     json.dump(select_bbox(train_single_class_gt), f)
+    # with open(C.TRAIN_OBJECTS_SEGM_SINGLE_CLASS_JSON, "w") as f:
+    #     json.dump(select_segmentation(train_single_class_gt), f)
 
     test_gt = process_test(categories)
     test_masks = process_ignore_masks(C.TEST_IGNORE_MASKS)
@@ -236,10 +236,10 @@ def main(args):
 
     test_single_class_gt = join_classes(test_gt)
 
-    with open(C.TEST_OBJECTS_IMAGE_INFO_JSON, "w") as f:
+    with open(C.TEST_IMAGE_INFO_JSON, "w") as f:
         json.dump(test_gt, f)
     
-    with open(C.TEST_OBJECTS_SINGLE_CLASS_IMAGE_INFO_JSON, "w") as f:
+    with open(C.TEST_IMAGE_INFO_SINGLE_CLASS_JSON, "w") as f:
         json.dump(test_single_class_gt, f)
 
     # train_masks = process_ignore_masks(C.TRAIN_IGNORE_MASKS)

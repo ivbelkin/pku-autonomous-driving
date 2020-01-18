@@ -8,6 +8,7 @@ import sys
 from ignite.contrib.handlers.tqdm_logger import ProgressBar
 from ignite.contrib.handlers.tensorboard_logger import *
 import torch
+from ignite.handlers import ModelCheckpoint
 
 logger = logging.getLogger('logger')
 
@@ -25,11 +26,13 @@ def main(args):
 
     pbar = ProgressBar()
     tb_logger = TensorboardLogger(log_dir=os.path.join(cfg.workdir, "tb_logs"))
+    checkpointer = ModelCheckpoint(os.path.join(cfg.workdir, "checkpoints"), '', 
+                                   save_interval=1, n_saved=cfg.n_epochs, create_dir=True, atomic=True)
 
     def _update(engine, batch):
         cfg.model.train()
         cfg.optimizer.zero_grad()
-        x, y = cfg.prepare_batch(batch)
+        x, y = cfg.prepare_train_batch(batch)
         y_pred = cfg.model(**x)
         loss = cfg.loss_fn(y_pred, y)
         loss['loss'].backward()
@@ -41,6 +44,7 @@ def main(args):
 
     pbar.attach(trainer, output_transform=lambda x: {k: "{:.5f}".format(v) for k, v in x.items()})
     trainer.add_event_handler(Events.ITERATION_STARTED, cfg.scheduler)
+    trainer.add_event_handler(Events.EPOCH_COMPLETED, checkpointer, {'model': cfg.model, 'optimizer': cfg.optimizer})
     tb_logger.attach(trainer,
                      log_handler=OutputHandler(tag="training", output_transform=lambda x: x),
                      event_name=Events.ITERATION_COMPLETED)
@@ -62,7 +66,7 @@ def main(args):
 
     def _evaluate(engine, batch):
         cfg.model.eval()
-        x, y = cfg.prepare_batch(batch)
+        x, y = cfg.prepare_train_batch(batch)
         batch_size = len(batch[list(batch.keys())[0]])
         with torch.no_grad():
             y_pred = cfg.model(**x)
@@ -83,7 +87,7 @@ def main(args):
 
     tb_logger.attach(evaluator,
                      log_handler=OutputHandler(tag="validation",
-                                               metric_names=['loss', 'rot_loss_cos', 'rot_loss_l1', 'trans_loss', 'true_distance'],
+                                               metric_names=['loss', 'rot_loss_cos', 'rot_loss_l1', 'trans_loss', 'true_distance', 'cls_loss'],
                                                global_step_transform=global_step_from_engine(trainer)),
                      event_name=Events.EPOCH_COMPLETED)
 

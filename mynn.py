@@ -52,15 +52,13 @@ def huber_loss(bbox_pred, bbox_targets, beta=2.8):
     return loss_box
 
 
-def dist_to_coord(outputs, batch):
-#     print(outputs['distance'])
-    z_outputs = outputs['distance'] * torch.sqrt(1 / torch.reshape(1 + torch.pow(batch['bbox'][:, 0], 2) + torch.pow(batch['bbox'][:, 1], 2), (-1, 1)))
-    x_outputs = torch.reshape(batch['bbox'][:, 0], (-1, 1)) * z_outputs
-    y_outputs = torch.reshape(batch['bbox'][:, 1], (-1, 1)) * z_outputs
-#     print(torch.cat((x_outputs,y_outputs,z_outputs),dim = -1))
+def dist_to_coord(distance_scaled, bbox):
+    z_outputs = distance_scaled * torch.sqrt(1 / torch.reshape(1 + torch.pow(bbox[:, 0], 2) + torch.pow(bbox[:, 1], 2), (-1, 1)))
+    x_outputs = torch.reshape(bbox[:, 0], (-1, 1)) * z_outputs
+    y_outputs = torch.reshape(bbox[:, 1], (-1, 1)) * z_outputs
     return torch.cat((x_outputs, y_outputs, z_outputs), dim=-1)
 
 
-def mean_distance(batch, outputs):
-    distance = torch.sqrt(torch.pow((dist_to_coord(outputs, batch) - batch['translation']), 2).sum(dim=1)).mean()
+def mean_distance(translation_pred, translation):
+    distance = torch.sqrt(torch.pow((translation_pred - translation), 2).sum(dim=1)).mean()
     return distance
