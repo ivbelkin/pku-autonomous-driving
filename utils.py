@@ -248,6 +248,12 @@ def rotation_to_quaternion(rotation):
     return q
 
 
+def quaternion_to_rotation(q):
+    rotation = R.from_quat(q)
+    ypr = rotation.as_euler("YXZ")
+    return ypr
+
+
 def fit_image(image, max_size):
     w, h = image.size
     scale = max_size / max(w, h)
