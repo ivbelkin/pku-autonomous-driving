@@ -19,7 +19,7 @@ n_epochs = 10
 train_ds = D.PKUSingleObjectTrainDataset(
     json_annotations=os.path.join(cfg.CV_DIR, 'fold-1', 'train_objects_both_train.json'),
     images_dir=cfg.TRAIN_IMAGES,
-    augment_fn=D.augment_fn_pass,
+    color_augment_fn=D.augment_fn_pass,
     prepare_sample_fn=D.prepare_train_sample_fn_v1,
     annotation_filter_fn=lambda ann: D.annotation_filter_fn_v1(ann,
         xlim=(-50, 50), ylim=(0, 50), zlim=(0, 200), dlim=(0, 100), wlim=(1, np.inf), hlim=(1, np.inf))
@@ -30,7 +30,7 @@ iters_per_epoch = len(train_dl)
 valid_ds = D.PKUSingleObjectTrainDataset(
     json_annotations=os.path.join(cfg.CV_DIR, 'fold-1', 'train_objects_both_valid.json'),
     images_dir=cfg.TRAIN_IMAGES,
-    augment_fn=D.augment_fn_pass,
+    color_augment_fn=D.augment_fn_pass,
     prepare_sample_fn=D.prepare_train_sample_fn_v1,
     annotation_filter_fn=lambda ann: D.annotation_filter_fn_v1(ann,
         xlim=(-50, 50), ylim=(0, 50), zlim=(0, 200), dlim=(0, 100), wlim=(1, np.inf), hlim=(1, np.inf))

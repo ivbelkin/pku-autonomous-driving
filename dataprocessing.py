@@ -6,7 +6,7 @@ import logging
 from PIL import Image
 import io
 import numpy as np
-from utils import euler_angles_to_quaternions, rotation_to_quaternion
+from utils import euler_angles_to_quaternions, rotation_to_quaternion, quaternion_to_rotation
 from torchvision import transforms as T
 from utils import fit_image, parse_camera_intrinsic, orient_quaternion
 import config as C
@@ -18,10 +18,10 @@ import pickle
 
 class PKUSingleObjectTrainDataset(Dataset):
 
-    def __init__(self, json_annotations, images_dir, augment_fn=None, prepare_sample_fn=None, annotation_filter_fn=None, image_keys=('image',)):
+    def __init__(self, json_annotations, images_dir, color_augment_fn=None, prepare_sample_fn=None, annotation_filter_fn=None, image_keys=('image',)):
         self.json_annotations = json_annotations
         self.images_dir = images_dir
-        self.augment_fn = augment_fn
+        self.color_augment_fn = color_augment_fn
         self.prepare_sample_fn = prepare_sample_fn
         self.image_keys = image_keys
 
@@ -57,10 +57,10 @@ class PKUSingleObjectTrainDataset(Dataset):
 
     def __getitem__(self, idx):
         dct = self._getdct(idx)
-        if self.augment_fn is not None:
-            dct = self.augment_fn(dct)
         if self.prepare_sample_fn is not None:
             dct = self.prepare_sample_fn(dct)
+        if self.color_augment_fn is not None:
+            dct = self.color_augment_fn(dct)
         for k in self.image_keys:
             dct[k] = self.to_tensor(dct[k])
         return dct
@@ -75,7 +75,8 @@ class PKUSingleObjectTrainDataset(Dataset):
             bbox=np.array(ann['bbox']),
             translation=np.array(ann['position']),
             rotation=np.array(ann['orientation']),
-            label=self.category_id_to_label[ann['category_id']]
+            label=self.category_id_to_label[ann['category_id']],
+            score=1.0,
         )
         return dct
 
@@ -177,6 +178,11 @@ def augment_fn_pass(dct):
     return dct
 
 
+def augment_fn_albu_color(dct, albu):
+    dct['image'] = Image.fromarray(albu(image=np.array(dct['image']))['image'])
+    return dct
+
+
 def prepare_train_sample_fn_v1(dct):
     k = parse_camera_intrinsic()
     x, y, w, h = dct['bbox']
@@ -206,7 +212,7 @@ def prepare_test_sample_fn_v1(dct):
 
 
 def decode_test_sample_fn_v1(x, y_pred):
-    dct = dict(translation=y_pred['translation'], rotation=y_pred['rotation'], score=x['score'], image_id=x['image_id'])
+    dct = dict(translation=y_pred['translation'], rotation=quaternion_to_rotation(y_pred['rotation']), score=x['score'], image_id=x['image_id'])
     return dct
 
 
