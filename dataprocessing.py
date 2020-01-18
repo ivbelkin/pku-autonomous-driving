@@ -16,7 +16,7 @@ import torch
 import pickle
 
 
-class PKUSingleObjectDataset(Dataset):
+class PKUSingleObjectTrainDataset(Dataset):
 
     def __init__(self, json_annotations, images_dir, augment_fn=None, prepare_sample_fn=None, annotation_filter_fn=None, image_keys=('image',)):
         self.json_annotations = json_annotations
@@ -67,7 +67,7 @@ class PKUSingleObjectDataset(Dataset):
 
     def _getdct(self, idx):
         ann = self.gt['annotations'][idx]
-        image = PKUSingleObjectDataset.decode_image(self.images_jpeg[ann['image_id']])
+        image = PKUSingleObjectTrainDataset.decode_image(self.images_jpeg[ann['image_id']])
         dct = dict(
             idx=idx,
             image_id=ann['image_id'],
@@ -95,11 +95,89 @@ class PKUSingleObjectDataset(Dataset):
         return image
 
 
+class PKUSingleObjectTestDataset(Dataset):
+
+    def __init__(self, json_image_info, json_detections, json_annotations, images_dir, masks_dir, prepare_sample_fn=None, image_keys=('image',)):
+        self.json_image_info = json_image_info
+        self.json_detections = json_detections
+        self.json_annotations = json_annotations
+        self.images_dir = images_dir
+        self.masks_dir = masks_dir
+        self.prepare_sample_fn = prepare_sample_fn
+        self.image_keys = image_keys
+
+        C.logger.info("Loading image info from %s", json_image_info)
+        with open(json_image_info, 'r') as f:
+            self.ii = json.load(f)
+
+        C.logger.info("Loading detections from %s", json_detections)
+        with open(json_detections, 'r') as f:
+            self.dt = json.load(f)
+
+        C.logger.info("Loading annotations from %s", json_annotations)
+        with open(json_annotations, 'r') as f:
+            self.gt = json.load(f)
+
+        cat_ids = set(ann['category_id'] for ann in self.gt['annotations'] if ann['iscrowd'] == 0)
+        categories = [cat for cat in self.gt['categories'] if cat['id'] in cat_ids]
+        self.category_id_to_label = {
+            cat["id"]: label
+            for label, cat in enumerate(sorted(categories, key=lambda x: x["id"]))
+        }
+        C.logger.debug("Number of labels: %i", len(self.category_id_to_label))
+        C.logger.debug(self.category_id_to_label)
+
+        self.images_jpeg = self.load_images()
+
+        self.to_tensor = T.Compose([
+            T.ToTensor(),
+            T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+        ])
+
+    def __len__(self):
+        return len(self.dt)
+
+    def __getitem__(self, idx):
+        dct = self._getdct(idx)
+        if self.prepare_sample_fn is not None:
+            dct = self.prepare_sample_fn(dct)
+        for k in self.image_keys:
+            dct[k] = self.to_tensor(dct[k])
+        return dct
+
+    def _getdct(self, idx):
+        ann = self.dt[idx]
+        image = PKUSingleObjectTestDataset.decode_image(self.images_jpeg[ann['image_id']])
+        dct = dict(
+            idx=idx,
+            image_id=ann['image_id'],
+            image=image,
+            bbox=np.array(ann['bbox']),
+            score=float(ann['score'])
+        )
+        return dct
+
+    def load_images(self):
+        C.logger.info("Loading images")
+        images = {}
+        for image in tqdm(self.ii['images']):
+            path = os.path.join(self.images_dir, image['file_name'])
+            data = open(path, 'rb').read()
+            images[image['id']] = io.BytesIO(data)
+        return images
+
+    @staticmethod
+    def decode_image(bytes_io):
+        image = Image.open(bytes_io)
+        image.load()
+        return image
+
+
 def augment_fn_pass(dct):
     return dct
 
 
-def prepare_sample_fn_v1(dct):
+def prepare_train_sample_fn_v1(dct):
     k = parse_camera_intrinsic()
     x, y, w, h = dct['bbox']
     dct['bbox'] = np.array([
@@ -111,6 +189,24 @@ def prepare_sample_fn_v1(dct):
     dct['image'] = fit_image(dct['image'], 256)
     q = rotation_to_quaternion(dct['rotation'])
     dct['rotation'] = orient_quaternion(q)
+    return dct
+
+
+def prepare_test_sample_fn_v1(dct):
+    k = parse_camera_intrinsic()
+    x, y, w, h = dct['bbox']
+    dct['bbox'] = np.array([
+        (x + w / 2 - k['cx']) / k['fx'], 
+        (y + h / 2 - k['cy']) / k['fy'], 
+        w / k['fx'], h / k['fy']
+    ])
+    dct['image'] = dct['image'].crop(tuple(map(int, [x, y, x + w, y + h])))
+    dct['image'] = fit_image(dct['image'], 256)
+    return dct
+
+
+def decode_test_sample_fn_v1(x, y_pred):
+    dct = dict(translation=y_pred['translation'], rotation=y_pred['rotation'], score=x['score'], image_id=x['image_id'])
     return dct
 
 

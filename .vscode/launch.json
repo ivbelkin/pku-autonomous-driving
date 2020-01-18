@@ -12,5 +12,13 @@
             "console": "integratedTerminal",
             "args": ["--gpu", "1", "--config", "train_config/sample/config.py"]
         }
+        {
+            "name": "Python: infer.py",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/infer.py",
+            "console": "integratedTerminal",
+            "args": ["--gpu", "1", "--config", "train_config/sample/config.py", "--checkpoint", "_model_1.pth"]
+        }
     ]
 }

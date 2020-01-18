@@ -2,7 +2,7 @@ import torch
 
 from torch import nn
 from torchvision import models
-from mynn import ConvBnAct
+from mynn import ConvBnAct, dist_to_coord
 
 RAD_POWER = 6
 
@@ -100,10 +100,14 @@ class Model(nn.Module):
         cls_score = self.cls_head(ln)
         rotation = self.rot_head(ln)
 
-        return dict(cls_score=cls_score, rotation=rotation, distance=distance_scaled)
+        rotation = rotation / torch.norm(rotation, dim=-1, keepdim=True)
+
+        translation = dist_to_coord(distance_scaled, bbox)
+
+        return dict(cls_score=cls_score, rotation=rotation, distance=distance_scaled, translation=translation)
 
 
-def prepare_batch(batch):
+def prepare_train_batch(batch):
     for k in batch:
         if k == 'label':
             batch[k] = batch[k].long()
@@ -113,3 +117,30 @@ def prepare_batch(batch):
     x = dict(x=batch['image'], bbox=batch['bbox'])
     y = batch
     return x, y
+
+
+def prepare_test_batch(batch):
+    for k in batch:
+        if k == 'label':
+            batch[k] = batch[k].long()
+        else:
+            batch[k] = batch[k].float()
+        batch[k] = batch[k].cuda()
+    x = dict(x=batch['image'], bbox=batch['bbox'])
+    return x
+
+
+def decode_y_pred(y_pred):
+    for k in y_pred:
+        y_pred[k] = y_pred[k].detach().cpu().numpy()
+        batch_size = y_pred[k].shape[0]
+    decoded = [{k: y_pred[k][i] for k in y_pred} for i in range(batch_size)]
+    return decoded
+
+
+def decode_batch(batch):
+    for k in batch:
+        batch[k] = batch[k].detach().cpu().numpy()
+        batch_size = batch[k].shape[0]
+    decoded = [{k: batch[k][i] for k in batch} for i in range(batch_size)]
+    return decoded
