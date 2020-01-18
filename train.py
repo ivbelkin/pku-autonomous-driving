@@ -87,7 +87,7 @@ def main(args):
 
     tb_logger.attach(evaluator,
                      log_handler=OutputHandler(tag="validation",
-                                               metric_names=['loss', 'rot_loss_cos', 'rot_loss_l1', 'trans_loss', 'true_distance'],
+                                               metric_names=['loss', 'rot_loss_cos', 'rot_loss_l1', 'trans_loss', 'true_distance', 'cls_loss'],
                                                global_step_transform=global_step_from_engine(trainer)),
                      event_name=Events.EPOCH_COMPLETED)
 

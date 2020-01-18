@@ -18,10 +18,11 @@ import pickle
 
 class PKUSingleObjectTrainDataset(Dataset):
 
-    def __init__(self, json_annotations, images_dir, color_augment_fn=None, prepare_sample_fn=None, annotation_filter_fn=None, image_keys=('image',)):
+    def __init__(self, json_annotations, images_dir, color_augment_fn=None, geom_augment_fn=None, prepare_sample_fn=None, annotation_filter_fn=None, image_keys=('image',)):
         self.json_annotations = json_annotations
         self.images_dir = images_dir
         self.color_augment_fn = color_augment_fn
+        self.geom_augment_fn = geom_augment_fn
         self.prepare_sample_fn = prepare_sample_fn
         self.image_keys = image_keys
 
@@ -57,6 +58,8 @@ class PKUSingleObjectTrainDataset(Dataset):
 
     def __getitem__(self, idx):
         dct = self._getdct(idx)
+        if self.geom_augment_fn is not None:
+            dct = self.geom_augment_fn(dct)
         if self.prepare_sample_fn is not None:
             dct = self.prepare_sample_fn(dct)
         if self.color_augment_fn is not None:
@@ -180,6 +183,17 @@ def augment_fn_pass(dct):
 
 def augment_fn_albu_color(dct, albu):
     dct['image'] = Image.fromarray(albu(image=np.array(dct['image']))['image'])
+    return dct
+
+
+def augment_fn_bbox(dct):
+    x, y, w, h = dct['bbox']
+    cx, cy = x + w / 2, y + h / 2
+    scale = np.array([w, h]) / 100
+    cx, cy = np.array([cx, cy]) + scale * np.random.normal(size=2)
+    w, h = np.array([w, h]) + scale * np.random.normal(size=2)
+    x, y = cx - w / 2, cy - h / 2
+    dct['bbox'] = [x, y, w, h]
     return dct
 
 
