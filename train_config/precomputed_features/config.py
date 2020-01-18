@@ -13,6 +13,7 @@ from torchvision import models
 
 
 workdir = os.path.join(cfg.WORKDIR, 'precomputed_features')
+os.makedirs(workdir, exist_ok=True)
 
 n_epochs = 10
 

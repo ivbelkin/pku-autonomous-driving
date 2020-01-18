@@ -1,3 +1,4 @@
 {
-    "python.pythonPath": "/home/ivb/.conda/envs/open-mmlab/bin/python"
+    "python.pythonPath": "/home/ivb/.conda/envs/open-mmlab/bin/python",
+    "python.envFile": "${workspaceFolder}/.env"
 }

@@ -54,9 +54,9 @@ def huber_loss(bbox_pred, bbox_targets, beta=2.8):
 
 def dist_to_coord(outputs, batch):
 #     print(outputs['distance'])
-    z_outputs = outputs['distance'] * torch.sqrt(1 / torch.reshape(1 + torch.pow(batch['bbox'][:, 0], 2) + torch.pow(batch['bbox'][:, 1], 2), (64, 1)))
-    x_outputs = torch.reshape(batch['bbox'][:, 0], (64, 1)) * z_outputs
-    y_outputs = torch.reshape(batch['bbox'][:, 1], (64, 1)) * z_outputs
+    z_outputs = outputs['distance'] * torch.sqrt(1 / torch.reshape(1 + torch.pow(batch['bbox'][:, 0], 2) + torch.pow(batch['bbox'][:, 1], 2), (-1, 1)))
+    x_outputs = torch.reshape(batch['bbox'][:, 0], (-1, 1)) * z_outputs
+    y_outputs = torch.reshape(batch['bbox'][:, 1], (-1, 1)) * z_outputs
 #     print(torch.cat((x_outputs,y_outputs,z_outputs),dim = -1))
     return torch.cat((x_outputs, y_outputs, z_outputs), dim=-1)
 

@@ -8,22 +8,33 @@ from torch import nn
 import numpy as np
 from ignite.contrib.handlers.param_scheduler import PiecewiseLinear, LRScheduler
 from torch.optim.lr_scheduler import StepLR
+import os
 
-workdir = 'sample_run_4'
+workdir = os.path.join(cfg.WORKDIR, 'sample_run_6')
+os.makedirs(workdir, exist_ok=True)
 
 n_epochs = 10
 
-train_ds = D.PKUJsonDataset(
-    json_annotations=cfg.TRAIN_OBJECTS_BOTH_JSON,
+train_ds = D.PKUSingleObjectDataset(
+    json_annotations=os.path.join(cfg.CV_DIR, 'fold-1', 'train_objects_both_train.json'),
     images_dir=cfg.TRAIN_IMAGES,
     augment_fn=D.augment_fn_pass,
     prepare_sample_fn=D.prepare_sample_fn_v1,
     annotation_filter_fn=lambda ann: D.annotation_filter_fn_v1(ann,
         xlim=(-50, 50), ylim=(0, 50), zlim=(0, 200), dlim=(0, 100), wlim=(1, np.inf), hlim=(1, np.inf))
 )
-
 train_dl = DataLoader(train_ds, batch_size=64, shuffle=True, num_workers=8, pin_memory=True, drop_last=True)
 iters_per_epoch = len(train_dl)
+
+valid_ds = D.PKUSingleObjectDataset(
+    json_annotations=os.path.join(cfg.CV_DIR, 'fold-1', 'train_objects_both_valid.json'),
+    images_dir=cfg.TRAIN_IMAGES,
+    augment_fn=D.augment_fn_pass,
+    prepare_sample_fn=D.prepare_sample_fn_v1,
+    annotation_filter_fn=lambda ann: D.annotation_filter_fn_v1(ann,
+        xlim=(-50, 50), ylim=(0, 50), zlim=(0, 200), dlim=(0, 100), wlim=(1, np.inf), hlim=(1, np.inf))
+)
+valid_dl = DataLoader(valid_ds, batch_size=64, shuffle=False, num_workers=8, pin_memory=True, drop_last=False)
 
 model = Model().float().cuda()
 

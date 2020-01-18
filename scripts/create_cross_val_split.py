@@ -40,7 +40,6 @@ def main(args):
         os.makedirs(fold_dir, exist_ok=True)
 
         for filepath in tqdm(C.ANNOTATIONS_JSON):
-            filepath = filepath.replace(".json", "_with_ignore.json")
             filename = os.path.basename(filepath)
             with open(filepath, "r") as f:
                 coco_gt = json.load(f)
