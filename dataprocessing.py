@@ -95,66 +95,6 @@ class PKUSingleObjectDataset(Dataset):
         return image
 
 
-class PKUSingleObjectWithPrecomputedImageFeaturesDataset(PKUSingleObjectDataset):
-
-    def __init__(self, extract_featues_fn, workdir, file_name, dct_key, **kwargs):
-        super().__init__(**kwargs)
-        self.dct_key = dct_key
-
-        path = os.path.join(workdir, file_name)
-        if os.path.exists(path + '.data') and os.path.exists(path + '.index'):
-            with open(path + '.index', 'rb') as f:
-                self.image_id_to_features_index = pickle.load(f)
-            print(self.image_id_to_features_index)
-            with open(path + '.data', 'rb') as f:
-                self.features = pickle.load(f)
-        else:
-            self.image_id_to_features_index, self.features = self.extract_features(extract_featues_fn)
-            with open(path + '.index', 'wb') as f:
-                pickle.dump(self.image_id_to_features_index, f)
-            with open(path + '.data', 'wb') as f:
-                pickle.dump(self.features, f)
-
-    def __getitem__(self, idx):
-        dct = super().__getitem__(idx)
-        dct[self.dct_key] = self.features[self.image_id_to_features_index[dct['image_id']]]
-        return dct
-
-    def extract_features(self, extract_featues_fn):
-        C.logger.info("Start feature extraction")
-        image_id_to_features_index, features = {}, []
-        for idx in tqdm(range(super().__len__())):
-            dct = super().__getitem__(idx)
-            image_id = dct['image_id']
-            if image_id not in image_id_to_features_index:
-                image_id_to_features_index[image_id] = len(features)
-                features.append(extract_featues_fn(dct))
-        return image_id_to_features_index, features
-
-
-class ResnetFeatureExtractor:
-
-    def __init__(self, model, dct_key):
-        self.model = model
-        self.dct_key = dct_key
-
-    def __call__(self, dct):
-        x = dct[self.dct_key].float().cuda()[None, :, :, :]
-
-        with torch.no_grad():
-            x = self.model.conv1(x)
-            x = self.model.bn1(x)
-            x = self.model.relu(x)
-            x = self.model.maxpool(x)
-
-            x = self.model.layer1(x)
-            x = self.model.layer2(x)
-            x = self.model.layer3(x)
-            x = self.model.layer4(x)
-
-        return x.cpu().numpy()
-
-
 def augment_fn_pass(dct):
     return dct
 
