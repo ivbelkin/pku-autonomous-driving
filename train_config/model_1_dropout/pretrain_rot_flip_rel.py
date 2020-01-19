@@ -40,28 +40,28 @@ train_ds = D.PKUSingleObjectTrainDataset(
     annotation_filter_fn=lambda ann: D.annotation_filter_fn_v1(ann,
         xlim=(-50, 50), ylim=(0, 50), zlim=(0, 200), dlim=(0, 100), wlim=(1, np.inf), hlim=(1, np.inf))
 )
-train_dl = DataLoader(train_ds, batch_size=64, shuffle=True, num_workers=8, pin_memory=False, drop_last=True)
+train_dl = DataLoader(train_ds, batch_size=64, shuffle=True, num_workers=4, pin_memory=False, drop_last=True)
 iters_per_epoch = len(train_dl)
 
 valid_ds = D.PKUSingleObjectTrainDataset(
     json_annotations=os.path.join(cfg.CV_DIR, 'fold-1', 'train_objects_both_valid.json'),
     images_dir=cfg.TRAIN_IMAGES,
     color_augment_fn=D.augment_fn_pass,
-    prepare_sample_fn=D.prepare_train_sample_fn_v1,
+    prepare_sample_fn=D.prepare_train_sample_fn_v2,
     annotation_filter_fn=lambda ann: D.annotation_filter_fn_v1(ann,
         xlim=(-50, 50), ylim=(0, 50), zlim=(0, 200), dlim=(0, 100), wlim=(1, np.inf), hlim=(1, np.inf))
 )
-valid_dl = DataLoader(valid_ds, batch_size=64, shuffle=False, num_workers=8, pin_memory=False, drop_last=False)
+valid_dl = DataLoader(valid_ds, batch_size=64, shuffle=False, num_workers=4, pin_memory=False, drop_last=False)
 
-test_ds = D.PKUSingleObjectTestDataset(
-    json_image_info=cfg.TEST_IMAGE_INFO_JSON,
-    json_detections=cfg.TEST_DETECTIONS,
-    json_annotations=os.path.join(cfg.CV_DIR, 'fold-1', 'train_objects_both_train.json'),
-    images_dir=cfg.TEST_IMAGES,
-    masks_dir=cfg.TEST_IGNORE_MASKS,
-    prepare_sample_fn=D.prepare_test_sample_fn_v1
-)
-test_dl = DataLoader(test_ds, batch_size=128, shuffle=False, num_workers=8, pin_memory=False, drop_last=False)
+# test_ds = D.PKUSingleObjectTestDataset(
+#     json_image_info=cfg.TEST_IMAGE_INFO_JSON,
+#     json_detections=cfg.TEST_DETECTIONS,
+#     json_annotations=os.path.join(cfg.CV_DIR, 'fold-1', 'train_objects_both_train.json'),
+#     images_dir=cfg.TEST_IMAGES,
+#     masks_dir=cfg.TEST_IGNORE_MASKS,
+#     prepare_sample_fn=D.prepare_test_sample_fn_v1
+# )
+# test_dl = DataLoader(test_ds, batch_size=128, shuffle=False, num_workers=8, pin_memory=False, drop_last=False)
 
 model = Model().float().cuda()
 # model.load_state_dict(torch.load(os.path.join(os.path.join(cfg.WORKDIR, 'model_1', 'stage_2_bbox_aug_weight_decay_2'), 'checkpoints', '_model_12.pth')))
