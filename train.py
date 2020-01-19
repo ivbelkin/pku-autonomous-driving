@@ -9,6 +9,7 @@ from ignite.contrib.handlers.tqdm_logger import ProgressBar
 from ignite.contrib.handlers.tensorboard_logger import *
 import torch
 from ignite.handlers import ModelCheckpoint
+from shutil import copyfile
 
 logger = logging.getLogger('logger')
 
@@ -23,6 +24,10 @@ def build_parser():
 def main(args):
     os.environ["CUDA_VISIBLE_DEVICES"] = str(args.gpu)
     cfg = load_config(args.config)
+
+    path, config_name = os.path.split(args.config)
+    copyfile(args.config, os.path.join(cfg.workdir, config_name))
+    copyfile(os.path.join(path, "model.py"), os.path.join(cfg.workdir, "model.py"))
 
     pbar = ProgressBar()
     tb_logger = TensorboardLogger(log_dir=os.path.join(cfg.workdir, "tb_logs"))
@@ -48,9 +53,9 @@ def main(args):
     tb_logger.attach(trainer,
                      log_handler=OutputHandler(tag="training", output_transform=lambda x: x),
                      event_name=Events.ITERATION_COMPLETED)
-    # tb_logger.attach(trainer,
-    #                  log_handler=OptimizerParamsHandler(cfg.optimizer),
-    #                  event_name=Events.ITERATION_STARTED)
+    tb_logger.attach(trainer,
+                     log_handler=OptimizerParamsHandler(cfg.optimizer),
+                     event_name=Events.ITERATION_STARTED)
     # tb_logger.attach(trainer,
     #                  log_handler=WeightsScalarHandler(cfg.model),
     #                  event_name=Events.ITERATION_COMPLETED)

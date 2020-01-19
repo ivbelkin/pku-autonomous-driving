@@ -8,12 +8,14 @@ import io
 import numpy as np
 from utils import euler_angles_to_quaternions, rotation_to_quaternion, quaternion_to_rotation
 from torchvision import transforms as T
-from utils import fit_image, parse_camera_intrinsic, orient_quaternion
+from utils import fit_image, parse_camera_intrinsic, orient_quaternion, get_camera_matrix
 import config as C
 import numpy as np
 from tqdm import tqdm
 import torch
 import pickle
+import cv2
+from scipy.spatial.transform import Rotation as R
 
 
 class PKUSingleObjectTrainDataset(Dataset):
@@ -186,15 +188,91 @@ def augment_fn_albu_color(dct, albu):
     return dct
 
 
-def augment_fn_bbox(dct):
+def augment_fn_bbox(dct, s=0.01):
     x, y, w, h = dct['bbox']
     cx, cy = x + w / 2, y + h / 2
-    scale = np.array([w, h]) / 100
+    scale = np.array([w, h]) * s
     cx, cy = np.array([cx, cy]) + scale * np.random.normal(size=2)
     w, h = np.array([w, h]) + scale * np.random.normal(size=2)
     x, y = cx - w / 2, cy - h / 2
     dct['bbox'] = [x, y, w, h]
     return dct
+
+
+def augment_fn_flip_rotate(dct, p_flip=0.5, p_rotate=0.5, rotatelim=(-5, 5)):
+    p = parse_camera_intrinsic()
+    A = np.eye(3)
+    aug = False
+    if np.random.uniform() < p_flip:
+        aug = True
+        F = np.array([
+            [-1, 0, 2 * p['cx']],
+            [ 0, 1,      0     ],
+            [ 0, 0,      1     ]
+        ])
+        A = F.dot(A)
+    if np.random.uniform() < p_rotate:
+        aug = True
+        alpha = np.random.uniform(rotatelim[0], rotatelim[1])
+        R = np.concatenate((cv2.getRotationMatrix2D((p['cx'], p['cy']), alpha, 1), [[0, 0, 1]]))
+        A = R.dot(A)
+    return apply_geom_to_image(dct, A) if aug else dct
+
+
+def apply_geom_to_image(dct, A):
+    C = get_camera_matrix()
+    M = np.linalg.inv(C).dot(A).dot(C)
+    return apply_geom(dct, A, M)
+
+
+def apply_geom_to_space(dct, M):
+    C = get_camera_matrix()
+    A = C.dot(M).dot(np.linalg.inv(C))
+    return apply_geom(dct, A, M)
+
+
+def apply_geom(dct, A, M):
+    image = np.array(dct['image'])
+    h, w = image.shape[:2]
+    image = cv2.warpPerspective(image, A, (w, h))
+    dct['image'] = Image.fromarray(image)
+
+    dct['translation'] = M.dot(dct['translation'])
+
+    q = rotation_to_quaternion(dct['rotation'])
+    q[:3] = M.dot(q[:3])
+    dct['rotation'] = quaternion_to_rotation(q)
+
+    x, y, w, h = dct['bbox']
+    P = np.array([
+        [x,         y, 1],
+        [x + w,     y, 1],
+        [x + w, y + h, 1],
+        [x,     y + h, 1]
+    ])
+    P = P.dot(A.T)
+    P /= P[:, -1:]
+    x, y = P[:, 0].min()    , P[:, 1].min()
+    w, h = P[:, 0].max() - x, P[:, 1].max() - y
+    dct['bbox'] = [x, y, w, h]
+    return dct
+
+
+def move_camera_to_object(dct):
+    C = get_camera_matrix()
+    C_inv = np.linalg.inv(C)
+    x, y, w, h = dct['bbox']
+    center_2d = np.array([x + w / 2, y + h / 2, 1])
+    center_3d = C_inv.dot(center_2d)
+    alpha_x = np.arctan2(center_3d[1], center_3d[2])
+    alpha_y = np.arctan2(center_3d[0], center_3d[2])
+    e_x, e_y = np.array([1, 0, 0]), np.array([0, 1, 0])
+    q_x = np.array([np.cos(alpha_x / 2), np.sin(alpha_x / 2) * e_x])
+    q_y = np.array([np.cos(alpha_y / 2), np.sin(alpha_y / 2) * e_y])
+    r_x, r_y = R.from_quat(q_x), R.from_quat(q_y)
+    r = r_x * r_y
+    M = r.as_dcm()
+    return apply_geom_to_space(dct, M)
 
 
 def prepare_train_sample_fn_v1(dct):

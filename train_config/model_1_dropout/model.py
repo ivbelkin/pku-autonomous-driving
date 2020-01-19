@@ -18,17 +18,18 @@ class Model(nn.Module):
             ConvBnAct(512, 256),
             ConvBnAct(256, 64),
             nn.Flatten(),
-            nn.Linear(64 * 8 * 8, 1024),  # 4
+            nn.Dropout(0.5),
+            nn.Linear(64 * 8 * 8, 1024),  # 5
             nn.Dropout(0.5),
             nn.LeakyReLU(inplace=True),
-            nn.Linear(1024, 1024),  # 7
+            nn.Linear(1024, 1024),  # 8
             nn.Dropout(0.5),
             nn.LeakyReLU(inplace=True)
         )
-        nn.init.kaiming_normal_(self.local_neck[4].weight, nonlinearity='leaky_relu')
-        nn.init.constant_(self.local_neck[4].bias, 0)
-        nn.init.kaiming_normal_(self.local_neck[7].weight, nonlinearity='leaky_relu')
-        nn.init.constant_(self.local_neck[7].bias, 0)
+        nn.init.kaiming_normal_(self.local_neck[5].weight, nonlinearity='leaky_relu')
+        nn.init.constant_(self.local_neck[5].bias, 0)
+        nn.init.kaiming_normal_(self.local_neck[8].weight, nonlinearity='leaky_relu')
+        nn.init.constant_(self.local_neck[8].bias, 0)
 
         self.cls_head = nn.Linear(1024, 34)
         nn.init.kaiming_normal_(self.cls_head.weight, nonlinearity='leaky_relu')
@@ -45,7 +46,6 @@ class Model(nn.Module):
 
         self.trans_neck = nn.Sequential(
              nn.Linear(1024, 128),
-             nn.Dropout(0.35),
              nn.LeakyReLU(inplace=True)
         )
         nn.init.kaiming_normal_(self.trans_neck[0].weight, nonlinearity='leaky_relu')
@@ -55,18 +55,16 @@ class Model(nn.Module):
             nn.Linear(2, 128),
             nn.LeakyReLU(inplace=True),
             nn.Linear(128, 128),
-            nn.Dropout(0.5),
             nn.LeakyReLU(inplace=True),
             nn.Linear(128, 128),
-            nn.Dropout(0.5),
             nn.LeakyReLU(inplace=True)
         )
         nn.init.kaiming_normal_(self.size_neck[0].weight, nonlinearity='leaky_relu')
         nn.init.constant_(self.size_neck[0].bias, 0)
         nn.init.kaiming_normal_(self.size_neck[2].weight, nonlinearity='leaky_relu')
         nn.init.constant_(self.size_neck[2].bias, 0)
-        nn.init.kaiming_normal_(self.size_neck[5].weight, nonlinearity='leaky_relu')
-        nn.init.constant_(self.size_neck[5].bias, 0)
+        nn.init.kaiming_normal_(self.size_neck[4].weight, nonlinearity='leaky_relu')
+        nn.init.constant_(self.size_neck[4].bias, 0)
 
         self.trans_head = nn.Linear(256, 1)
         nn.init.xavier_normal_(self.trans_head.weight)
@@ -100,7 +98,7 @@ class Model(nn.Module):
 
         distance = self.trans_head(torch.cat((sn, tn), dim=-1))
 
-        distance_scaled = distance * ta
+        distance_scaled = 100 * distance * ta
 
         cls_score = self.cls_head(ln)
         rotation = self.rot_head(ln)

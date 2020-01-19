@@ -12,7 +12,7 @@ import os
 from dataprocessing import decode_test_sample_fn_v1 as decode_test_sample
 import albumentations as A
 
-workdir = os.path.join(cfg.WORKDIR, 'model_1_dropout', 'stage_1')
+workdir = os.path.join(cfg.WORKDIR, 'model_1_dropout', 'stage_1_less_do')
 os.makedirs(workdir, exist_ok=True)
 
 n_epochs = 100

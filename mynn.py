@@ -32,8 +32,8 @@ def huber_loss(bbox_pred, bbox_targets, beta=2.8):
     dis_trans = torch.norm(box_diff, dim=1)
     # dis_trans = np.linalg.norm(box_diff.data.cpu().numpy(), axis=1)
     # we also add a metric for dist<2.8 metres.
-    inbox_idx = dis_trans <= 2.8
-    outbox_idx = dis_trans > 2.8
+    inbox_idx = dis_trans <= beta
+    outbox_idx = dis_trans > beta
 
     # bbox_inside_weights = torch.from_numpy(inbox_idx.astype('float32')).cuda()
     # bbox_outside_weights = torch.from_numpy(outbox_idx.astype('float32')).cuda()
