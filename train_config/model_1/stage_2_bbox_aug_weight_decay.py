@@ -12,7 +12,7 @@ import os
 from dataprocessing import decode_test_sample_fn_v1 as decode_test_sample
 import albumentations as A
 
-workdir = os.path.join(cfg.WORKDIR, 'model_1', 'stage_2')
+workdir = os.path.join(cfg.WORKDIR, 'model_1', 'stage_2_bbox_aug_weight_decay_2')
 os.makedirs(workdir, exist_ok=True)
 
 n_epochs = 50
@@ -35,6 +35,7 @@ train_ds = D.PKUSingleObjectTrainDataset(
     json_annotations=os.path.join(cfg.CV_DIR, 'fold-1', 'train_objects_both_train.json'),
     images_dir=cfg.TRAIN_IMAGES,
     color_augment_fn=lambda dct: D.augment_fn_albu_color(dct, albu_train_transforms),
+    geom_augment_fn=D.augment_fn_bbox,
     prepare_sample_fn=D.prepare_train_sample_fn_v1,
     annotation_filter_fn=lambda ann: D.annotation_filter_fn_v1(ann,
         xlim=(-50, 50), ylim=(0, 50), zlim=(0, 200), dlim=(0, 100), wlim=(1, np.inf), hlim=(1, np.inf))
@@ -63,12 +64,12 @@ test_ds = D.PKUSingleObjectTestDataset(
 test_dl = DataLoader(test_ds, batch_size=128, shuffle=False, num_workers=8, pin_memory=False, drop_last=False)
 
 model = Model().float().cuda()
-model.load_state_dict(torch.load(os.path.join(os.path.join(cfg.WORKDIR, 'model_1', 'stage_2'), 'checkpoints', '_model_10.pth')))
+model.load_state_dict(torch.load(os.path.join(os.path.join(cfg.WORKDIR, 'model_1', 'stage_2_bbox_aug_weight_decay'), 'checkpoints', '_model_10.pth')))
 # for p in model.backbone.parameters():
 #     p.requires_grad = False
 
-optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
-optimizer.load_state_dict(torch.load(os.path.join(os.path.join(cfg.WORKDIR, 'model_1', 'stage_2'), 'checkpoints', '_optimizer_10.pth')))
+optimizer = torch.optim.Adam(model.parameters(), lr=0.0001, weight_decay=0.0005)
+optimizer.load_state_dict(torch.load(os.path.join(os.path.join(cfg.WORKDIR, 'model_1', 'stage_2_bbox_aug_weight_decay'), 'checkpoints', '_optimizer_10.pth')))
 
 # scheduler = PiecewiseLinear(optimizer, "lr",
 #                             milestones_values=[(0, 0.000001), (iters_per_epoch, 0.0001), (6 * iters_per_epoch, 0.000001), (n_epochs * iters_per_epoch, 0.0000001)])

@@ -11,7 +11,7 @@ class ConvBnAct(nn.Module):
         self.bn = nn.BatchNorm2d(out_channels)
         self.act = nn.LeakyReLU(inplace=True)
         
-        nn.init.kaiming_normal_(self.conv.weight, nonlinearity='relu')
+        nn.init.kaiming_normal_(self.conv.weight, nonlinearity='leaky_relu')
         nn.init.constant_(self.conv.bias, 0)
     
     def forward(self, x):

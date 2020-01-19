@@ -18,13 +18,13 @@ def main(args):
     os.environ["CUDA_VISIBLE_DEVICES"] = str(args.gpu)
     cfg = load_config(args.config)
 
-    cfg.model.load_state_dict(torch.load(os.path.join(cfg.workdir, 'checkpoints', args.checkpoint)))
+    cfg.model.load_state_dict(torch.load(args.checkpoint))
     cfg.model.eval()
 
-    image_id_to_ID = {image['id']: image['file_name'].split('.')[0] for image in cfg.train_ds.gt['images']}
+    image_id_to_ID = {image['id']: image['file_name'].split('.')[0] for image in cfg.test_ds.ii['images']}
 
     results = []
-    for batch in tqdm(cfg.train_dl):
+    for batch in tqdm(cfg.test_dl):
         x = cfg.prepare_test_batch(batch)
         with torch.no_grad():
             y_pred = cfg.model(**x)

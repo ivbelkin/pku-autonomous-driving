@@ -48,21 +48,21 @@ def main(args):
     tb_logger.attach(trainer,
                      log_handler=OutputHandler(tag="training", output_transform=lambda x: x),
                      event_name=Events.ITERATION_COMPLETED)
-    tb_logger.attach(trainer,
-                     log_handler=OptimizerParamsHandler(cfg.optimizer),
-                     event_name=Events.ITERATION_STARTED)
-    tb_logger.attach(trainer,
-                     log_handler=WeightsScalarHandler(cfg.model),
-                     event_name=Events.ITERATION_COMPLETED)
-    tb_logger.attach(trainer,
-                     log_handler=WeightsHistHandler(cfg.model),
-                     event_name=Events.EPOCH_COMPLETED)
-    tb_logger.attach(trainer,
-                     log_handler=GradsScalarHandler(cfg.model),
-                     event_name=Events.ITERATION_COMPLETED)
-    tb_logger.attach(trainer,
-                     log_handler=GradsHistHandler(cfg.model),
-                     event_name=Events.EPOCH_COMPLETED)
+    # tb_logger.attach(trainer,
+    #                  log_handler=OptimizerParamsHandler(cfg.optimizer),
+    #                  event_name=Events.ITERATION_STARTED)
+    # tb_logger.attach(trainer,
+    #                  log_handler=WeightsScalarHandler(cfg.model),
+    #                  event_name=Events.ITERATION_COMPLETED)
+    # tb_logger.attach(trainer,
+    #                  log_handler=WeightsHistHandler(cfg.model),
+    #                  event_name=Events.EPOCH_COMPLETED)
+    # tb_logger.attach(trainer,
+    #                  log_handler=GradsScalarHandler(cfg.model),
+    #                  event_name=Events.ITERATION_COMPLETED)
+    # tb_logger.attach(trainer,
+    #                  log_handler=GradsHistHandler(cfg.model),
+    #                  event_name=Events.EPOCH_COMPLETED)
 
     def _evaluate(engine, batch):
         cfg.model.eval()
